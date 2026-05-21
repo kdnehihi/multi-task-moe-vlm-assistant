@@ -1,7 +1,42 @@
-"""Placeholder tests for evaluation metrics.
+"""Tests for evaluation metrics."""
 
-TODO:
-- Add tests for Exact Match normalization.
-- Add tests for ANLS once implemented.
-"""
+import pytest
 
+from src.evaluation.metrics import (
+    exact_match,
+    mean_score,
+    normalize_answer,
+    routing_accuracy,
+)
+
+
+def test_normalize_answer() -> None:
+    assert normalize_answer(" The Revenue, 2021! ") == "revenue 2021"
+
+
+def test_exact_match_accepts_any_ground_truth_answer() -> None:
+    assert exact_match("2021.", ["2020", "2021"]) == 1.0
+
+
+def test_exact_match_rejects_wrong_answer() -> None:
+    assert exact_match("2022", ["2021"]) == 0.0
+
+
+def test_mean_score() -> None:
+    assert mean_score([1.0, 0.0, 1.0]) == pytest.approx(2 / 3)
+
+
+def test_mean_score_empty_list() -> None:
+    assert mean_score([]) == 0.0
+
+
+def test_routing_accuracy() -> None:
+    predicted_tasks = ["chart_qa", "document_qa", "image_vqa"]
+    target_tasks = ["chart_qa", "document_qa", "document_qa"]
+
+    assert routing_accuracy(predicted_tasks, target_tasks) == pytest.approx(2 / 3)
+
+
+def test_routing_accuracy_rejects_length_mismatch() -> None:
+    with pytest.raises(ValueError):
+        routing_accuracy(["chart_qa"], ["chart_qa", "document_qa"])
