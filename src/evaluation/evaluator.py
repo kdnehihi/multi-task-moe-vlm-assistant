@@ -11,16 +11,52 @@ def evaluate_predictions(
     if len(predictions) != len(references):
         raise ValueError("predictions and references must have the same length.")
 
-    exact_match_scores = []
-
-    for prediction, reference in zip(predictions, references):
-        score = exact_match(prediction, reference["answers"])
-        exact_match_scores.append(score)
+    exact_match_scores = compute_exact_match_scores(predictions, references)
 
     return {
         "num_examples": len(predictions),
         "exact_match": mean_score(exact_match_scores),
     }
+
+
+def evaluate_predictions_by_task(
+    predictions: list[str],
+    references: list[dict],
+) -> dict:
+    """Evaluate answer predictions overall and grouped by task type."""
+    if len(predictions) != len(references):
+        raise ValueError("predictions and references must have the same length.")
+
+    task_scores = {}
+
+    for prediction, reference in zip(predictions, references):
+        task_type = reference["task_type"]
+        score = exact_match(prediction, reference["answers"])
+        task_scores.setdefault(task_type, []).append(score)
+
+    by_task = {
+        task_type: {
+            "num_examples": len(scores),
+            "exact_match": mean_score(scores),
+        }
+        for task_type, scores in sorted(task_scores.items())
+    }
+
+    return {
+        "overall": evaluate_predictions(predictions, references),
+        "by_task": by_task,
+    }
+
+
+def compute_exact_match_scores(
+    predictions: list[str],
+    references: list[dict],
+) -> list[float]:
+    """Compute per-example exact match scores."""
+    return [
+        exact_match(prediction, reference["answers"])
+        for prediction, reference in zip(predictions, references)
+    ]
 
 
 def evaluate_routing(

@@ -1,17 +1,97 @@
-"""Evaluate models for multi-task vision-language QA.
+"""Run baseline evaluation for multi-task vision-language QA."""
 
-TODO:
-- Load predictions and references.
-- Compute Exact Match, ANLS, task-level accuracy, routing accuracy, latency, and memory usage.
-- Export experiment summaries.
-"""
+from argparse import ArgumentParser
+from pathlib import Path
+import json
+import sys
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.append(str(PROJECT_ROOT))
+
+from src.data.dataset import VQADataset
+from src.evaluation.evaluator import evaluate_predictions_by_task
+from src.models.baseline_vlm import create_baseline_model
+
+
+def parse_args():
+    parser = ArgumentParser()
+    parser.add_argument(
+        "--metadata-path",
+        default="data/processed/multitask/validation.jsonl",
+    )
+    parser.add_argument("--model", default="dummy", choices=("dummy", "blip"))
+    parser.add_argument("--model-id", default=None)
+    parser.add_argument("--device", default=None)
+    parser.add_argument("--limit", type=int, default=None)
+    parser.add_argument(
+        "--predictions-path",
+        default="outputs/predictions/baseline_predictions.jsonl",
+    )
+    return parser.parse_args()
+
+
+def select_examples(dataset: VQADataset, limit: int | None) -> list[dict]:
+    examples = list(dataset)
+
+    if limit is None:
+        return examples
+
+    return examples[:limit]
+
+
+def write_predictions(records: list[dict], output_path: str) -> None:
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    with path.open("w", encoding="utf-8") as f:
+        for record in records:
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
 def main() -> None:
-    """Placeholder CLI entry point."""
-    raise NotImplementedError("Evaluation is not implemented yet.")
+    args = parse_args()
+
+    dataset = VQADataset(args.metadata_path)
+    references = select_examples(dataset, args.limit)
+    model = create_baseline_model(
+        model_name=args.model,
+        model_id=args.model_id,
+        device=args.device,
+    )
+
+    predictions = []
+    prediction_records = []
+
+    for index, reference in enumerate(references):
+        prediction = model.predict(
+            image_path=reference["image_path"],
+            question=reference["question"],
+        )
+        predictions.append(prediction)
+        prediction_records.append(
+            {
+                "index": index,
+                "dataset": reference["dataset"],
+                "task_type": reference["task_type"],
+                "question": reference["question"],
+                "answers": reference["answers"],
+                "prediction": prediction,
+                "image_path": reference["image_path"],
+            }
+        )
+        print(
+            f"[{index + 1}/{len(references)}] "
+            f"{reference['dataset']} | prediction={prediction!r}",
+            flush=True,
+        )
+
+    report = evaluate_predictions_by_task(predictions, references)
+    write_predictions(prediction_records, args.predictions_path)
+
+    print(json.dumps(report, indent=2), flush=True)
+    print(f"Saved predictions to {args.predictions_path}", flush=True)
 
 
 if __name__ == "__main__":
     main()
-

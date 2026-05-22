@@ -2,7 +2,11 @@
 
 import pytest
 
-from src.evaluation.evaluator import evaluate_predictions, evaluate_routing
+from src.evaluation.evaluator import (
+    evaluate_predictions,
+    evaluate_predictions_by_task,
+    evaluate_routing,
+)
 
 
 def test_evaluate_predictions_computes_exact_match() -> None:
@@ -22,6 +26,30 @@ def test_evaluate_predictions_rejects_length_mismatch() -> None:
 
     with pytest.raises(ValueError):
         evaluate_predictions(["2021", "2022"], references)
+
+
+def test_evaluate_predictions_by_task_reports_task_metrics() -> None:
+    references = [
+        {"answers": ["2021"], "task_type": "chart_qa"},
+        {"answers": ["yes"], "task_type": "document_qa"},
+        {"answers": ["no"], "task_type": "document_qa"},
+    ]
+
+    result = evaluate_predictions_by_task(["2021.", "yes", "maybe"], references)
+
+    assert result["overall"]["num_examples"] == 3
+    assert result["overall"]["exact_match"] == pytest.approx(2 / 3)
+    assert result["by_task"]["chart_qa"]["num_examples"] == 1
+    assert result["by_task"]["chart_qa"]["exact_match"] == 1.0
+    assert result["by_task"]["document_qa"]["num_examples"] == 2
+    assert result["by_task"]["document_qa"]["exact_match"] == pytest.approx(0.5)
+
+
+def test_evaluate_predictions_by_task_rejects_length_mismatch() -> None:
+    references = [{"answers": ["2021"], "task_type": "chart_qa"}]
+
+    with pytest.raises(ValueError):
+        evaluate_predictions_by_task(["2021", "2022"], references)
 
 
 def test_evaluate_routing_computes_accuracy() -> None:
@@ -48,4 +76,3 @@ def test_evaluate_routing_rejects_length_mismatch() -> None:
 
     with pytest.raises(ValueError):
         evaluate_routing(["chart_qa"], references)
-
