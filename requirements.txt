@@ -5,6 +5,7 @@ transformers
 datasets
 accelerate
 peft
+qwen-vl-utils
 
 # Configuration and experiment tracking.
 hydra-core
@@ -26,4 +27,3 @@ streamlit
 # Testing and code quality.
 pytest
 ruff
-
