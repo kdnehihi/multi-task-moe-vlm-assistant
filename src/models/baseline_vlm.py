@@ -93,10 +93,45 @@ class BlipVQABaselineVLM(BaselineVLM):
         return "cpu"
 
 
+class BlipLoRAVQABaselineVLM(BlipVQABaselineVLM):
+    """BLIP VQA wrapper that loads a PEFT LoRA adapter checkpoint."""
+
+    def __init__(
+        self,
+        adapter_path: str,
+        model_name: str = DEFAULT_BLIP_MODEL_NAME,
+        device: str | None = None,
+        max_new_tokens: int = 20,
+    ) -> None:
+        super().__init__(
+            model_name=model_name,
+            device=device,
+            max_new_tokens=max_new_tokens,
+        )
+        self.adapter_path = adapter_path
+
+    def _ensure_loaded(self) -> None:
+        """Load BLIP base weights plus a LoRA adapter if needed."""
+        if self.processor is not None and self.model is not None:
+            return
+
+        import torch
+        from peft import PeftModel
+        from transformers import BlipForQuestionAnswering, BlipProcessor
+
+        self.device = self.device or self._select_device(torch)
+        self.processor = BlipProcessor.from_pretrained(self.model_name)
+        base_model = BlipForQuestionAnswering.from_pretrained(self.model_name)
+        self.model = PeftModel.from_pretrained(base_model, self.adapter_path)
+        self.model.to(self.device)
+        self.model.eval()
+
+
 def create_baseline_model(
     model_name: str = "dummy",
     model_id: str | None = None,
     device: str | None = None,
+    adapter_path: str | None = None,
 ) -> BaselineVLM:
     """Create a baseline model wrapper by name.
 
@@ -108,6 +143,14 @@ def create_baseline_model(
         return DummyBaselineVLM()
     if model_name == "blip":
         return BlipVQABaselineVLM(
+            model_name=model_id or DEFAULT_BLIP_MODEL_NAME,
+            device=device,
+        )
+    if model_name == "blip_lora":
+        if adapter_path is None:
+            raise ValueError("--adapter-path is required for blip_lora")
+        return BlipLoRAVQABaselineVLM(
+            adapter_path=adapter_path,
             model_name=model_id or DEFAULT_BLIP_MODEL_NAME,
             device=device,
         )

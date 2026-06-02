@@ -4,6 +4,7 @@ import pytest
 
 from src.models.baseline_vlm import (
     DEFAULT_BLIP_MODEL_NAME,
+    BlipLoRAVQABaselineVLM,
     BlipVQABaselineVLM,
     DummyBaselineVLM,
     create_baseline_model,
@@ -46,6 +47,26 @@ def test_create_baseline_model_accepts_custom_blip_model_id() -> None:
 
     assert isinstance(model, BlipVQABaselineVLM)
     assert model.model_name == "custom/blip-model"
+
+
+def test_create_baseline_model_returns_blip_lora_model_without_loading_weights() -> None:
+    model = create_baseline_model(
+        "blip_lora",
+        adapter_path="outputs/checkpoints/blip_lora_baseline_sample",
+        device="cpu",
+    )
+
+    assert isinstance(model, BlipLoRAVQABaselineVLM)
+    assert model.model_name == DEFAULT_BLIP_MODEL_NAME
+    assert model.adapter_path == "outputs/checkpoints/blip_lora_baseline_sample"
+    assert model.device == "cpu"
+    assert model.processor is None
+    assert model.model is None
+
+
+def test_create_baseline_model_requires_adapter_path_for_blip_lora() -> None:
+    with pytest.raises(ValueError, match="adapter-path"):
+        create_baseline_model("blip_lora")
 
 
 def test_create_baseline_model_rejects_unknown_model() -> None:

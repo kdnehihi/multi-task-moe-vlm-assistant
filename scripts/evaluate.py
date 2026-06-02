@@ -20,8 +20,13 @@ def parse_args():
         "--metadata-path",
         default="data/processed/multitask/validation.jsonl",
     )
-    parser.add_argument("--model", default="dummy", choices=("dummy", "blip"))
+    parser.add_argument(
+        "--model",
+        default="dummy",
+        choices=("dummy", "blip", "blip_lora"),
+    )
     parser.add_argument("--model-id", default=None)
+    parser.add_argument("--adapter-path", default=None)
     parser.add_argument("--device", default=None)
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument(
@@ -58,6 +63,7 @@ def main() -> None:
         model_name=args.model,
         model_id=args.model_id,
         device=args.device,
+        adapter_path=args.adapter_path,
     )
 
     predictions = []
