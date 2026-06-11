@@ -4,12 +4,19 @@ from argparse import ArgumentParser
 from pathlib import Path
 import json
 
+from src.data.answers import canonicalize_task_type
+
 
 DOCVQA_DATASET_NAME = "lmms-lab/DocVQA"
 DOCVQA_DATASET_CONFIG = "DocVQA"
 CHARTQA_DATASET_NAME = "HuggingFaceM4/ChartQA"
 TEXTVQA_DATASET_NAME = "lmms-lab/textvqa"
 SUPPORTED_DATASETS = ("docvqa", "chartqa", "textvqa")
+
+
+def canonical_task_type(task_type: str | None, dataset: str | None = None) -> str:
+    """Backward-compatible task alias helper for prepared metadata."""
+    return canonicalize_task_type(task_type, dataset)
 
 
 def parse_args():
@@ -86,7 +93,7 @@ def save_docvqa_sample(
                 "question": example.get("question"),
                 "answers": as_answer_list(example.get("answers")),
                 "image_path": save_image(example["image"], image_dir, split, index),
-                "task_type": "document_qa",
+                "task_type": "docvqa",
             }
 
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
@@ -126,7 +133,7 @@ def save_chartqa_sample(
                 "question": example.get("query") or example.get("question"),
                 "answers": as_answer_list(example.get("label") or example.get("answer")),
                 "image_path": save_image(example["image"], image_dir, split, index),
-                "task_type": "chart_qa",
+                "task_type": "chartqa",
             }
 
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
@@ -165,7 +172,7 @@ def save_textvqa_sample(
                 "question": example.get("question"),
                 "answers": as_answer_list(example.get("answers")),
                 "image_path": save_image(example["image"], image_dir, split, index),
-                "task_type": "image_vqa",
+                "task_type": "textvqa",
             }
 
             f.write(json.dumps(record, ensure_ascii=False) + "\n")

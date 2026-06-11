@@ -11,6 +11,8 @@ Main design:
 
 from dataclasses import dataclass
 
+from src.data.answers import canonicalize_task_type
+
 
 QWEN2VL_BACKBONE_ID = "Qwen/Qwen2-VL-2B-Instruct"
 
@@ -78,7 +80,7 @@ PLANNED_SHARED_LORA_EXPERTS: dict[str, LoRAExpertConfig] = {
 
 def get_lora_expert(task_type: str) -> LoRAExpertConfig:
     """Return the LoRA expert config for a predicted task type."""
-    normalized_task_type = task_type.strip().lower()
+    normalized_task_type = canonicalize_task_type(task_type)
 
     if normalized_task_type not in QWEN2VL_LORA_EXPERTS:
         known_tasks = ", ".join(sorted(QWEN2VL_LORA_EXPERTS))

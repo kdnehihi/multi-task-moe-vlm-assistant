@@ -5,6 +5,8 @@ import json
 
 from torch.utils.data import Dataset
 
+from src.data.answers import canonicalize_task_type
+
 REQUIRED_FIELDS = {
     "dataset",
     "split",
@@ -43,6 +45,10 @@ class VQADataset(Dataset):
             raise FileNotFoundError(
                 f"Image not found at line {line_number}: {example['image_path']}"
             )
+        example["task_type"] = canonicalize_task_type(
+            example["task_type"],
+            example["dataset"],
+        )
 
     def __len__(self) -> int:
         return len(self.examples)

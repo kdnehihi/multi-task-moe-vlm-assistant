@@ -28,7 +28,7 @@ def test_vqa_dataset_loads_valid_jsonl(tmp_path: Path) -> None:
 
     assert len(dataset) == 1
     assert dataset[0]["question"] == "What is the date?"
-    assert dataset[0]["task_type"] == "document_qa"
+    assert dataset[0]["task_type"] == "docvqa"
 
 
 def test_vqa_dataset_rejects_missing_fields(tmp_path: Path) -> None:

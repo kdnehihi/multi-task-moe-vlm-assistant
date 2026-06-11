@@ -3,6 +3,7 @@
 import pytest
 
 from src.evaluation.evaluator import (
+    build_prediction_records,
     evaluate_predictions,
     evaluate_predictions_by_task,
     evaluate_routing,
@@ -19,6 +20,8 @@ def test_evaluate_predictions_computes_exact_match() -> None:
 
     assert result["num_examples"] == 2
     assert result["exact_match"] == pytest.approx(0.5)
+    assert result["normalized_exact_match"] == pytest.approx(0.5)
+    assert result["raw_exact_match"] == pytest.approx(0.0)
 
 
 def test_evaluate_predictions_rejects_length_mismatch() -> None:
@@ -43,6 +46,29 @@ def test_evaluate_predictions_by_task_reports_task_metrics() -> None:
     assert result["by_task"]["chart_qa"]["exact_match"] == 1.0
     assert result["by_task"]["document_qa"]["num_examples"] == 2
     assert result["by_task"]["document_qa"]["exact_match"] == pytest.approx(0.5)
+    assert result["overall"]["token_f1"] > 0.0
+    assert "avg_output_token_length" in result["overall"]
+
+
+def test_build_prediction_records_includes_quality_fields() -> None:
+    references = [
+        {
+            "question": "Where?",
+            "answers": ["New York"],
+            "task_type": "textvqa",
+            "chosen_training_answer": "New York",
+        }
+    ]
+
+    records = build_prediction_records(["The answer is New York."], references)
+
+    assert records[0]["question"] == "Where?"
+    assert records[0]["chosen_training_answer"] == "New York"
+    assert records[0]["raw_prediction"] == "The answer is New York."
+    assert records[0]["cleaned_prediction"] == "The answer is New York."
+    assert records[0]["normalized_em"] == 0.0
+    assert records[0]["containment"] == 1.0
+    assert records[0]["output_length"] == 5
 
 
 def test_evaluate_predictions_by_task_rejects_length_mismatch() -> None:

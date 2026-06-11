@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 
+from scripts.prepare_data import canonical_task_type
 from src.data.preprocessing import build_multitask_jsonl, normalize_record
 
 
@@ -35,8 +36,14 @@ def test_normalize_record_selects_core_fields(tmp_path: Path) -> None:
         "image_path",
     }
     assert normalized["dataset"] == "docvqa"
-    assert normalized["task_type"] == "document_qa"
+    assert normalized["task_type"] == "docvqa"
     assert "unused_field" not in normalized
+
+
+def test_canonical_task_type_keeps_backward_compatible_aliases() -> None:
+    assert canonical_task_type("document_qa") == "docvqa"
+    assert canonical_task_type("chart_qa") == "chartqa"
+    assert canonical_task_type("image_vqa") == "textvqa"
 
 
 def test_build_multitask_jsonl_merges_datasets(tmp_path: Path) -> None:

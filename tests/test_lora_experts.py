@@ -33,6 +33,12 @@ def test_get_lora_expert_returns_adapter_metadata() -> None:
     assert expert.target_modules == ("q_proj", "v_proj")
 
 
+def test_get_lora_expert_accepts_legacy_task_alias() -> None:
+    expert = get_lora_expert("document_qa")
+
+    assert expert.task_type == "docvqa"
+
+
 def test_get_lora_expert_rejects_unknown_task_type() -> None:
     with pytest.raises(ValueError, match="Unsupported LoRA expert task type"):
         get_lora_expert("medical_qa")

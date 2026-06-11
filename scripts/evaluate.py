@@ -10,7 +10,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.append(str(PROJECT_ROOT))
 
 from src.data.dataset import VQADataset
-from src.evaluation.evaluator import evaluate_predictions_by_task
+from src.evaluation.evaluator import build_prediction_records, evaluate_predictions_by_task
 from src.models.baseline_vlm import create_baseline_model
 
 
@@ -67,7 +67,6 @@ def main() -> None:
     )
 
     predictions = []
-    prediction_records = []
 
     for index, reference in enumerate(references):
         prediction = model.predict(
@@ -75,17 +74,6 @@ def main() -> None:
             question=reference["question"],
         )
         predictions.append(prediction)
-        prediction_records.append(
-            {
-                "index": index,
-                "dataset": reference["dataset"],
-                "task_type": reference["task_type"],
-                "question": reference["question"],
-                "answers": reference["answers"],
-                "prediction": prediction,
-                "image_path": reference["image_path"],
-            }
-        )
         print(
             f"[{index + 1}/{len(references)}] "
             f"{reference['dataset']} | prediction={prediction!r}",
@@ -93,6 +81,7 @@ def main() -> None:
         )
 
     report = evaluate_predictions_by_task(predictions, references)
+    prediction_records = build_prediction_records(predictions, references)
     write_predictions(prediction_records, args.predictions_path)
 
     print(json.dumps(report, indent=2), flush=True)

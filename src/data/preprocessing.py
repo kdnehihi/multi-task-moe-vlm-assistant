@@ -3,6 +3,8 @@
 from pathlib import Path
 import json
 
+from src.data.answers import canonicalize_task_type
+
 
 DEFAULT_DATASETS = ("docvqa", "chartqa", "textvqa")
 
@@ -57,6 +59,10 @@ def normalize_record(record: dict, line_number: int, source_path: Path) -> dict:
     normalized["answers"] = [str(answer) for answer in normalized["answers"]]
     normalized["question"] = str(normalized["question"])
     normalized["image_path"] = str(normalized["image_path"])
+    normalized["task_type"] = canonicalize_task_type(
+        normalized["task_type"],
+        normalized["dataset"],
+    )
 
     return normalized
 
