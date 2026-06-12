@@ -1,13 +1,19 @@
 """Evaluation helpers for vision-language QA predictions."""
 
 from src.evaluation.metrics import (
+    anls,
     containment,
+    loose_containment,
     mean_score,
+    normalize_answer,
     normalized_exact_match,
     output_token_length,
     raw_exact_match,
+    relaxed_numeric_accuracy,
     routing_accuracy,
+    strict_containment,
     token_f1,
+    vqa_soft_score,
 )
 
 
@@ -95,14 +101,40 @@ def build_prediction_records(
                 "chosen_training_answer": reference.get("chosen_training_answer"),
                 "raw_prediction": prediction,
                 "cleaned_prediction": cleaned_prediction,
+                "normalized_prediction": normalize_answer(cleaned_prediction),
+                "normalized_references": [normalize_answer(answer) for answer in answers],
                 "output_length": output_token_length(cleaned_prediction),
                 "raw_exact_match": raw_exact_match(prediction, answers),
                 "normalized_em": normalized_exact_match(cleaned_prediction, answers),
                 "token_f1": token_f1(cleaned_prediction, answers),
+                "strict_containment": strict_containment(cleaned_prediction, answers),
+                "old_containment_if_available": loose_containment(cleaned_prediction, answers),
                 "containment": containment(cleaned_prediction, answers),
+                "chart_relaxed_accuracy": task_metric(
+                    reference.get("task_type", ""),
+                    "chartqa",
+                    relaxed_numeric_accuracy(cleaned_prediction, answers),
+                ),
+                "anls": task_metric(
+                    reference.get("task_type", ""),
+                    ("docvqa", "textvqa"),
+                    anls(cleaned_prediction, answers),
+                ),
+                "vqa_score": task_metric(
+                    reference.get("task_type", ""),
+                    "textvqa",
+                    vqa_soft_score(cleaned_prediction, answers),
+                ),
             }
         )
     return records
+
+
+def task_metric(task_type: str, expected: str | tuple[str, ...], score: float) -> float | None:
+    """Return score only for matching task types."""
+    if isinstance(expected, str):
+        expected = (expected,)
+    return score if task_type in expected else None
 
 
 def summarize_quality_records(records: list[dict]) -> dict:
@@ -116,7 +148,23 @@ def summarize_quality_records(records: list[dict]) -> dict:
         ),
         "exact_match": mean_score([record["normalized_em"] for record in records]),
         "token_f1": mean_score([record["token_f1"] for record in records]),
-        "containment": mean_score([record["containment"] for record in records]),
+        "strict_containment": mean_score([record["strict_containment"] for record in records]),
+        "containment": mean_score([record["strict_containment"] for record in records]),
+        "old_containment_if_available": mean_score(
+            [record["old_containment_if_available"] for record in records]
+        ),
+        "chart_relaxed_accuracy": mean_optional(
+            [record["chart_relaxed_accuracy"] for record in records]
+        ),
+        "docvqa_anls": mean_optional(
+            [record["anls"] for record in records if record["task_type"] == "docvqa"]
+        ),
+        "textvqa_anls": mean_optional(
+            [record["anls"] for record in records if record["task_type"] == "textvqa"]
+        ),
+        "textvqa_vqa_score": mean_optional(
+            [record["vqa_score"] for record in records if record["task_type"] == "textvqa"]
+        ),
         "avg_output_token_length": mean_score(lengths),
         "pct_outputs_gt_10_tokens": mean_score(
             [1.0 if length > 10 else 0.0 for length in lengths]
@@ -125,6 +173,14 @@ def summarize_quality_records(records: list[dict]) -> dict:
             [1.0 if length > 20 else 0.0 for length in lengths]
         ),
     }
+
+
+def mean_optional(scores: list[float | None]) -> float | None:
+    """Mean over non-null task-specific scores."""
+    present_scores = [score for score in scores if score is not None]
+    if not present_scores:
+        return None
+    return mean_score(present_scores)
 
 
 def summarize_quality_records_by_task(records: list[dict]) -> dict:
