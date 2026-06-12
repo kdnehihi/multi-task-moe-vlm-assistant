@@ -2,6 +2,7 @@
 
 from src.evaluation.metrics import (
     anls,
+    chart_hybrid_accuracy,
     containment,
     loose_containment,
     mean_score,
@@ -115,6 +116,11 @@ def build_prediction_records(
                     "chartqa",
                     relaxed_numeric_accuracy(cleaned_prediction, answers),
                 ),
+                "chart_hybrid_accuracy": task_metric(
+                    reference.get("task_type", ""),
+                    "chartqa",
+                    chart_hybrid_accuracy(cleaned_prediction, answers),
+                ),
                 "anls": task_metric(
                     reference.get("task_type", ""),
                     ("docvqa", "textvqa"),
@@ -155,6 +161,9 @@ def summarize_quality_records(records: list[dict]) -> dict:
         ),
         "chart_relaxed_accuracy": mean_optional(
             [record["chart_relaxed_accuracy"] for record in records]
+        ),
+        "chart_hybrid_accuracy": mean_optional(
+            [record["chart_hybrid_accuracy"] for record in records]
         ),
         "docvqa_anls": mean_optional(
             [record["anls"] for record in records if record["task_type"] == "docvqa"]

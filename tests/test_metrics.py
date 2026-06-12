@@ -4,6 +4,7 @@ import pytest
 
 from src.evaluation.metrics import (
     anls,
+    chart_hybrid_accuracy,
     containment,
     exact_match,
     mean_score,
@@ -50,6 +51,15 @@ def test_relaxed_numeric_accuracy() -> None:
     assert relaxed_numeric_accuracy("15.08647", ["15"]) == 1.0
     assert relaxed_numeric_accuracy("64%", ["64"]) == 1.0
     assert relaxed_numeric_accuracy("2.465833", ["10.13"]) == 0.0
+
+
+def test_chart_hybrid_accuracy_handles_numeric_and_label_answers() -> None:
+    assert chart_hybrid_accuracy("19346.08", ["19346"]) == 1.0
+    assert chart_hybrid_accuracy("15.08647", ["15"]) == 1.0
+    assert chart_hybrid_accuracy("64%", ["64"]) == 1.0
+    assert chart_hybrid_accuracy("2.465833", ["10.13"]) == 0.0
+    assert chart_hybrid_accuracy("Yes", ["Yes"]) == 1.0
+    assert chart_hybrid_accuracy("Gray (light grey)", ["gray"]) == 1.0
 
 
 def test_anls_thresholds_low_similarity() -> None:

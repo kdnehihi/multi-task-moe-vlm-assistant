@@ -178,6 +178,20 @@ def relaxed_numeric_accuracy(
     return 0.0
 
 
+def chart_hybrid_accuracy(prediction: str, answers: list[str]) -> float:
+    """Return ChartQA accuracy for numeric, yes/no, and label answers."""
+    prediction_has_number = bool(extract_numbers(prediction))
+    numeric_answers = [answer for answer in answers if extract_numbers(answer)]
+
+    if prediction_has_number and numeric_answers:
+        return relaxed_numeric_accuracy(prediction, numeric_answers)
+
+    if normalized_exact_match(prediction, answers):
+        return 1.0
+
+    return strict_containment(prediction, answers)
+
+
 def levenshtein_distance(left: str, right: str) -> int:
     """Compute Levenshtein edit distance."""
     if left == right:

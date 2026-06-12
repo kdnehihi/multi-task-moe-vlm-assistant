@@ -5,6 +5,7 @@ import pytest
 from src.models.lora_adapter import (
     PLANNED_SHARED_LORA_EXPERTS,
     QWEN2VL_BACKBONE_ID,
+    QWEN2VL_HYBRID_LORA_ADAPTERS,
     QWEN2VL_LORA_EXPERTS,
     get_lora_expert,
 )
@@ -82,3 +83,17 @@ def test_planned_shared_experts_are_separate_from_task_experts() -> None:
     assert set(PLANNED_SHARED_LORA_EXPERTS) == {"shared_ocr", "shared_reasoning"}
     assert PLANNED_SHARED_LORA_EXPERTS["shared_ocr"].is_shared is True
     assert PLANNED_SHARED_LORA_EXPERTS["shared_ocr"].expert_id == 101
+
+
+def test_hybrid_lora_adapter_registry_contains_chart_and_doc_text_paths() -> None:
+    assert set(QWEN2VL_HYBRID_LORA_ADAPTERS) == {
+        "chart_lora",
+        "shared_doc_text_lora",
+        "shared_lora_all_tasks",
+    }
+    assert QWEN2VL_HYBRID_LORA_ADAPTERS["shared_doc_text_lora"].checkpoint_dir.endswith(
+        "qwen2vl/shared_doc_text_lora"
+    )
+    assert QWEN2VL_HYBRID_LORA_ADAPTERS["chart_lora"].checkpoint_dir.endswith(
+        "qwen2vl/chart_lora"
+    )

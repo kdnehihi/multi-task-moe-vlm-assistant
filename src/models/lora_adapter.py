@@ -78,6 +78,39 @@ PLANNED_SHARED_LORA_EXPERTS: dict[str, LoRAExpertConfig] = {
 }
 
 
+QWEN2VL_HYBRID_LORA_ADAPTERS: dict[str, LoRAExpertConfig] = {
+    "shared_doc_text_lora": LoRAExpertConfig(
+        expert_id=201,
+        task_type="docvqa,textvqa",
+        adapter_name="shared_doc_text_lora",
+        checkpoint_dir="outputs/checkpoints/qwen2vl/shared_doc_text_lora",
+        description="Shared adapter for OCR/span extraction on DocVQA and TextVQA.",
+        is_shared=True,
+        rank=4,
+        alpha=8,
+    ),
+    "chart_lora": LoRAExpertConfig(
+        expert_id=202,
+        task_type="chartqa",
+        adapter_name="chart_lora",
+        checkpoint_dir="outputs/checkpoints/qwen2vl/chart_lora",
+        description="Chart-specific adapter for chart reading and numeric grounding.",
+        rank=8,
+        alpha=16,
+    ),
+    "shared_lora_all_tasks": LoRAExpertConfig(
+        expert_id=203,
+        task_type="chartqa,docvqa,textvqa",
+        adapter_name="shared_lora_all_tasks",
+        checkpoint_dir="outputs/checkpoints/qwen2vl/shared_lora_all_tasks",
+        description="Backward-compatible shared adapter trained on all three tasks.",
+        is_shared=True,
+        rank=4,
+        alpha=8,
+    ),
+}
+
+
 def get_lora_expert(task_type: str) -> LoRAExpertConfig:
     """Return the LoRA expert config for a predicted task type."""
     normalized_task_type = canonicalize_task_type(task_type)

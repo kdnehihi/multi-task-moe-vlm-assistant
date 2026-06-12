@@ -96,6 +96,7 @@ def test_build_prediction_records_adds_task_specific_metrics() -> None:
     )
 
     assert chart_records[0]["chart_relaxed_accuracy"] == 1.0
+    assert chart_records[0]["chart_hybrid_accuracy"] == 1.0
     assert chart_records[0]["anls"] is None
     assert doc_records[0]["anls"] > 0.5
     assert text_records[0]["vqa_score"] == pytest.approx(2 / 3)
