@@ -442,6 +442,23 @@ def target_modules_from_args(args) -> list[str]:
     return TARGET_MODULE_PRESETS[args.target_modules_preset]
 
 
+def get_qwen_vl_model_class(model_name: str):
+    """Return the right Transformers class for Qwen2-VL or Qwen2.5-VL."""
+    if "qwen2.5" in model_name.lower():
+        try:
+            from transformers import Qwen2_5_VLForConditionalGeneration
+        except ImportError as error:
+            raise ImportError(
+                "Qwen2.5-VL requires a recent transformers version with "
+                "Qwen2_5_VLForConditionalGeneration. Upgrade transformers."
+            ) from error
+        return Qwen2_5_VLForConditionalGeneration
+
+    from transformers import Qwen2VLForConditionalGeneration
+
+    return Qwen2VLForConditionalGeneration
+
+
 def main() -> None:
     args = parse_args()
     ensure_dependencies()
@@ -449,7 +466,7 @@ def main() -> None:
     import torch
     from peft import LoraConfig, PeftModel, get_peft_model
     from qwen_vl_utils import process_vision_info
-    from transformers import AutoProcessor, Qwen2VLForConditionalGeneration
+    from transformers import AutoProcessor
 
     random.seed(args.seed)
     torch.manual_seed(args.seed)
@@ -465,7 +482,8 @@ def main() -> None:
         min_pixels=args.min_pixels,
         max_pixels=args.max_pixels,
     )
-    model = Qwen2VLForConditionalGeneration.from_pretrained(
+    model_class = get_qwen_vl_model_class(args.model_name)
+    model = model_class.from_pretrained(
         args.model_name,
         torch_dtype=dtype,
         device_map="auto" if device == "cuda" else None,
