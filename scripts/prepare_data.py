@@ -28,7 +28,12 @@ def parse_args():
     parser = ArgumentParser()
     parser.add_argument("--dataset", choices=SUPPORTED_DATASETS, default="docvqa")
     parser.add_argument("--split", default="validation")
-    parser.add_argument("--limit", type=int, default=20)
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Maximum examples to save. Omit to save the full split.",
+    )
     parser.add_argument("--output-dir", default=None)
     parser.add_argument(
         "--streaming",
@@ -88,7 +93,7 @@ def save_docvqa_sample(
 
     with metadata_path.open("w", encoding="utf-8") as f:
         for index, example in enumerate(dataset):
-            if index >= limit:
+            if limit is not None and index >= limit:
                 break
 
             record = {
@@ -128,7 +133,7 @@ def save_chartqa_sample(
 
     with metadata_path.open("w", encoding="utf-8") as f:
         for index, example in enumerate(dataset):
-            if index >= limit:
+            if limit is not None and index >= limit:
                 break
 
             record = {
@@ -167,7 +172,7 @@ def save_textvqa_sample(
 
     with metadata_path.open("w", encoding="utf-8") as f:
         for index, example in enumerate(dataset):
-            if index >= limit:
+            if limit is not None and index >= limit:
                 break
 
             record = {
