@@ -33,8 +33,7 @@ CHARTQA_CHECKPOINT_DIR = (
     "chart_dora_r8_a16_B_lr2e-5"
 )
 TEXTVQA_CHECKPOINT_DIR = (
-    "/content/drive/MyDrive/multi-task-moe-vlm-assistant/checkpoints/"
-    "qwen2vl/qwen25vl_7b/textvqa_lora"
+    "checkpoints/textvqa_lora/textvqa_lora"
 )
 
 CHART_KEYWORDS = (

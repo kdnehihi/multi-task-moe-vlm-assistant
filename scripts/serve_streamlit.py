@@ -1,0 +1,207 @@
+"""Simple Streamlit demo for routed Qwen2.5-VL QA inference."""
+
+from __future__ import annotations
+
+import gc
+import sys
+import tempfile
+from pathlib import Path
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from src.models.baseline_vlm import Qwen2VLVQABaselineVLM
+from src.routing.task_router import (
+    BASE_BACKEND_NAME,
+    CHARTQA_BACKEND_NAME,
+    DEFAULT_DEBERTA_ROUTER_DIR,
+    TEXTVQA_BACKEND_NAME,
+    DebertaEmbeddingLogRegTaskRouter,
+    RouterDecision,
+    select_task_backend,
+)
+
+
+MODEL_NAME = "Qwen/Qwen2.5-VL-7B-Instruct"
+CHART_ADAPTER_PATH = "checkpoints/chart_dora_r8_a16_B_lr2e-5/chart_dora_r8_a16_B_lr2e-5"
+TEXT_ADAPTER_PATH = "checkpoints/textvqa_lora/textvqa_lora"
+
+DOCVQA_PROMPT_TEMPLATE = """Read the document and answer the question.
+Return only the exact answer span.
+Do not explain.
+
+Question: {question}
+Answer:"""
+
+TEXTVQA_PROMPT_TEMPLATE = """Read the visible text in the image and answer the question.
+Return the complete answer, preserving important words and numbers.
+Do not list all visible words.
+Do not explain.
+
+Question: {question}
+Answer:"""
+
+CHARTQA_PROMPT_TEMPLATE = """Read the chart carefully.
+Use the chart title, axis labels, legend, colors, categories, and values to answer the question.
+If the question asks yes/no, answer only Yes or No.
+Otherwise return only the final value, label, or short phrase.
+Do not explain.
+Do not include extra text.
+
+Question: {question}
+Answer:"""
+
+
+def load_router(router_path: Path) -> DebertaEmbeddingLogRegTaskRouter | None:
+    """Load the trained DeBERTa embedding router when available."""
+    classifier_path = router_path / "embedding_logreg.joblib"
+    if not classifier_path.exists():
+        return None
+    return DebertaEmbeddingLogRegTaskRouter.load(router_path)
+
+
+def model_config_for_decision(decision: RouterDecision) -> dict:
+    """Return Qwen wrapper config for the selected backend."""
+    if decision.backend_name == CHARTQA_BACKEND_NAME:
+        return {
+            "adapter_path": CHART_ADAPTER_PATH,
+            "adapter_name": "chart_lora",
+            "prompt_template": CHARTQA_PROMPT_TEMPLATE,
+            "max_new_tokens": 8,
+            "repetition_penalty": 1.1,
+        }
+    if decision.backend_name == TEXTVQA_BACKEND_NAME:
+        return {
+            "adapter_path": TEXT_ADAPTER_PATH,
+            "adapter_name": "textvqa_lora",
+            "prompt_template": TEXTVQA_PROMPT_TEMPLATE,
+            "max_new_tokens": 12,
+            "repetition_penalty": 1.1,
+        }
+    if decision.backend_name == BASE_BACKEND_NAME:
+        return {
+            "adapter_path": None,
+            "adapter_name": "base",
+            "prompt_template": DOCVQA_PROMPT_TEMPLATE,
+            "max_new_tokens": 16,
+            "repetition_penalty": 1.1,
+        }
+    raise ValueError(f"Unsupported backend: {decision.backend_name}")
+
+
+def unload_current_model() -> None:
+    """Drop the current session model before loading another backend."""
+    import streamlit as st
+
+    st.session_state.pop("active_model", None)
+    st.session_state.pop("active_backend", None)
+    gc.collect()
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+    except Exception:
+        pass
+
+
+def get_or_load_model(decision: RouterDecision) -> Qwen2VLVQABaselineVLM:
+    """Keep only one Qwen backend loaded in the current Streamlit session."""
+    import streamlit as st
+
+    if st.session_state.get("active_backend") == decision.backend_name:
+        return st.session_state["active_model"]
+
+    unload_current_model()
+    config = model_config_for_decision(decision)
+    model = Qwen2VLVQABaselineVLM(
+        model_name=MODEL_NAME,
+        adapter_path=config["adapter_path"],
+        adapter_name=config["adapter_name"],
+        prompt_template=config["prompt_template"],
+        max_new_tokens=config["max_new_tokens"],
+        repetition_penalty=config["repetition_penalty"],
+    )
+    st.session_state["active_backend"] = decision.backend_name
+    st.session_state["active_model"] = model
+    return model
+
+
+def save_uploaded_image(uploaded_file) -> str:
+    """Persist one uploaded image to a temporary local file."""
+    suffix = Path(uploaded_file.name).suffix or ".png"
+    handle = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+    handle.write(uploaded_file.getvalue())
+    handle.flush()
+    handle.close()
+    return handle.name
+
+
+def main() -> None:
+    import streamlit as st
+
+    st.set_page_config(page_title="Routed VLM QA", layout="centered")
+    st.title("Routed Qwen2.5-VL QA")
+
+    router_path = st.sidebar.text_input(
+        "Router checkpoint",
+        value=str(DEFAULT_DEBERTA_ROUTER_DIR),
+    )
+    min_confidence = st.sidebar.slider(
+        "Router confidence fallback",
+        min_value=0.0,
+        max_value=1.0,
+        value=0.65,
+        step=0.05,
+    )
+    if st.sidebar.button("Unload current Qwen model"):
+        unload_current_model()
+        st.sidebar.success("Model unloaded.")
+
+    uploaded_image = st.file_uploader(
+        "Image",
+        type=["png", "jpg", "jpeg", "webp"],
+    )
+    question = st.text_input("Question")
+
+    if not uploaded_image:
+        st.info("Upload an image to start.")
+        return
+    st.image(uploaded_image, caption="Input image", use_container_width=True)
+
+    if not question.strip():
+        st.info("Enter a question.")
+        return
+
+    if st.button("Answer", type="primary"):
+        with st.spinner("Loading router..."):
+            router = load_router(Path(router_path))
+            decision = select_task_backend(
+                question,
+                router=router,
+                min_confidence=min_confidence,
+            )
+
+        st.write(
+            {
+                "task_type": decision.task_type,
+                "backend": decision.backend_name,
+                "use_adapter": decision.use_adapter,
+                "adapter": decision.adapter_name,
+                "confidence": decision.confidence,
+            }
+        )
+
+        image_path = save_uploaded_image(uploaded_image)
+        with st.spinner(f"Running {decision.backend_name}..."):
+            model = get_or_load_model(decision)
+            answer = model.predict(image_path, question)
+
+        st.subheader("Answer")
+        st.write(answer)
+
+
+if __name__ == "__main__":
+    main()
