@@ -169,7 +169,7 @@ def main() -> None:
     if not uploaded_image:
         st.info("Upload an image to start.")
         return
-    st.image(uploaded_image, caption="Input image", use_container_width=True)
+    st.image(uploaded_image, caption="Input image", width="stretch")
 
     if not question.strip():
         st.info("Enter a question.")
