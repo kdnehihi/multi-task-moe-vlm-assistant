@@ -1,16 +1,19 @@
-"""Start the future FastAPI inference service.
+"""Start the FastAPI routed VLM QA service."""
 
-TODO:
-- Wire this script to src.serving.api after inference is implemented.
-- Add model loading, request validation, and response formatting.
-"""
+from __future__ import annotations
+
+import uvicorn
 
 
 def main() -> None:
-    """Placeholder CLI entry point."""
-    raise NotImplementedError("API serving is not implemented yet.")
+    """Run the API server."""
+    uvicorn.run(
+        "src.serving.api:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=False,
+    )
 
 
 if __name__ == "__main__":
     main()
-

@@ -24,6 +24,7 @@ Pillow
 fastapi
 uvicorn
 streamlit
+python-multipart
 
 # Testing and code quality.
 pytest
