@@ -1,6 +1,6 @@
-# Routed Qwen2.5-VL QA
+# Task-Routed VLM QA
 
-OCR-heavy visual question answering system for **ChartQA**, **DocVQA**, and **TextVQA**.
+[task-routed-vlm-qa](https://github.com/kdnehihi/task-routed-vlm-qa) is an OCR-heavy visual question answering system for **ChartQA**, **DocVQA**, and **TextVQA**.
 
 The project started as a MoE-LoRA fine-tuning experiment, but the strongest final shape is a safer routed system:
 
