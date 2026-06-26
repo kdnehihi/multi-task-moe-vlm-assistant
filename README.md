@@ -53,6 +53,14 @@ Validation snapshot from the Qwen2.5-VL-7B routed experiments:
 | ChartQA DoRA `r8_a16_B_lr2e-5` | **0.8333** | - | - | - | Best ChartQA backend |
 | TextVQA LoRA `r4_a8` | - | - | **0.7708** | **0.8047** | Best TextVQA backend |
 
+Using the best backend for each task gives an average task-primary score of **0.8239**:
+
+```text
+(ChartQA 0.8333 + DocVQA 0.8677 + TextVQA 0.7708) / 3 = 0.8239
+```
+
+Compared with the pre-postprocessing zero-shot baseline (**0.6901 overall**), the final routed system improves average task-primary performance by **13.4 percentage points**.
+
 Multimodal router validation:
 
 | Router | Accuracy | Macro F1 | Eval support |
